@@ -6,8 +6,8 @@
 // --------------------------------------------------------------------------
 // 1. SUPABASE CONFIGURATION & SYNC HELPERS
 // --------------------------------------------------------------------------
-const SUPABASE_RAW_URL = "https://iacsiognshciovcxxzdb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhY3Npb2duc2hjaW92Y3h4emRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNDAxODksImV4cCI6MjEwNzcxNjE4OX0.XFsbE-QlFpJHmDqm66ajRpMXGaNO9mj4Qt8NmlHXczE";
+const SUPABASE_RAW_URL = "https://nvrhpzqthzrdjjgobssj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cmhwenF0aHpyZGpqZ29ic3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzOTE1MDcsImV4cCI6MjEwNzk2NzUwN30._eXYPh_9AOSdX-_XEMVRjnEEllUgpyR11vQvZBCe5tk";
 
 const SUPABASE_URL = SUPABASE_RAW_URL.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
 
