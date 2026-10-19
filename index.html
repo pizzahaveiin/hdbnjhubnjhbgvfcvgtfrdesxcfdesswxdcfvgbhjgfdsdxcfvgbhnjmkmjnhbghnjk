@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant POS & Operations</title>
+  
+  <!-- Google Fonts: Multiple typography options for the font switcher -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Urbanist:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+  <!-- Google Material Symbols (Printer Icon) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Supabase JS Client v2 (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="theme-light-minimal font-dm-sans">
+
+  <!-- =========================================================================
+       Top App Header
+       ========================================================================= -->
+  <header class="top-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-badge">POS</span>
+        <span class="restaurant-name-display" id="headerRestaurantName">Restaurant POS</span>
+      </div>
+      <div class="header-actions">
+        <div class="header-status">
+          <span class="status-indicator" id="statusDot"></span>
+          <span class="status-text" id="connectionStatus">Connected</span>
+        </div>
+        <button type="button" id="btnBluetoothPrinter" class="btn-printer-nav" title="Configure Printer & Paper Size">
+          <span class="material-symbols-outlined printer-nav-icon">print</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       Main Application Views Container
+       ========================================================================= -->
+  <main class="page-container">
+
+    <!-- -----------------------------------------------------------------------
+         1. DASHBOARD PAGE (Placeholder per vision)
+         ----------------------------------------------------------------------- -->
+    <section id="page-dashboard" class="page-view active">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+      </div>
+
+      <div class="card empty-card">
+        <div class="empty-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="9" x="3" y="3" rx="1"/>
+            <rect width="7" height="5" x="14" y="3" rx="1"/>
+            <rect width="7" height="9" x="14" y="12" rx="1"/>
+            <rect width="7" height="5" x="3" y="16" rx="1"/>
+          </svg>
+        </div>
+        <h3 class="empty-title">Dashboard is ready</h3>
+        <p class="empty-desc">Your daily statistics, sales revenue graphs, and settlement metrics will appear here in future updates.</p>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         2. KITCHEN PAGE (Live Interactive Kitchen Display System)
+         ----------------------------------------------------------------------- -->
+    <section id="page-kitchen" class="page-view">
+      <!-- Hidden Audio Element for Fallback Chime -->
+      <audio id="audioKitchenAlert" preload="auto"></audio>
+
+      <!-- Kitchen Expediter Header & Controls -->
+      <div class="kds-header">
+        <div class="kds-header-left">
+          <div class="kds-title-wrap">
+            <h1 class="page-title">Kitchen Display</h1>
+            <span class="kds-live-pulse-badge">
+              <span class="pulse-dot"></span> Live
+            </span>
+          </div>
+          <!-- Live Status Metric Pills -->
+          <div class="kds-metrics-bar">
+            <div class="kds-metric-pill active-pill" id="kdsMetricActiveWrap">
+              <span class="metric-label">Active</span>
+              <span class="metric-count" id="kdsCountActive">0</span>
+            </div>
+            <div class="kds-metric-pill cooking-pill" id="kdsMetricCookingWrap">
+              <span class="metric-label">Cooking</span>
+              <span class="metric-count" id="kdsCountCooking">0</span>
+            </div>
+            <div class="kds-metric-pill ready-pill" id="kdsMetricReadyWrap">
+              <span class="metric-label">Ready</span>
+              <span class="metric-count" id="kdsCountReady">0</span>
+            </div>
+            <div class="kds-metric-pill urgent-pill" id="kdsMetricUrgentWrap">
+              <span class="metric-label">Urgent</span>
+              <span class="metric-count" id="kdsCountUrgent">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="kds-header-right">
+          <!-- Audio Toggle & Test Button -->
+          <div class="kds-audio-controls">
+            <button type="button" id="btnToggleKitchenSound" class="btn btn-secondary btn-sm" title="Toggle Kitchen Alert Chime">
+              <span class="kds-sound-icon" id="kdsSoundIcon">🔔</span>
+              <span id="kdsSoundLabel">Sound On</span>
+            </button>
+            <button type="button" id="btnTestKitchenChime" class="btn btn-ghost btn-sm" title="Play test chime">
+              <span>Test Chime</span>
+            </button>
+          </div>
+
+          <!-- Active Prep Only Filter Toggle -->
+          <label class="kds-toggle-switch-label" title="Hide served orders to keep kitchen uncluttered">
+            <input type="checkbox" id="toggleActivePrepOnly" checked>
+            <span class="kds-toggle-slider"></span>
+            <span class="kds-toggle-text">Active Prep Only</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- KDS Cards Grid Container -->
+      <div id="kitchenCardsGrid" class="kitchen-grid">
+        <!-- Live Kitchen Cards populated by KitchenController -->
+      </div>
+
+      <!-- Empty State Card (When no tickets exist) -->
+      <div id="kitchenEmptyState" class="card empty-card" style="display: none;">
+        <div class="empty-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+            <line x1="6" x2="18" y1="17" y2="17"/>
+          </svg>
+        </div>
+        <h3 class="empty-title">Kitchen queue is clear</h3>
+        <p class="empty-desc">No tickets currently in preparation. Active kitchen orders dispatched from the POS terminal will stream here with real-time updates.</p>
+      </div>
+
+      <!-- 5-Second Undo / Recall Floating Toast -->
+      <div id="kitchenUndoToast" class="kds-undo-toast" style="display: none;">
+        <div class="kds-undo-content">
+          <span class="kds-undo-icon">✓</span>
+          <span id="kdsUndoMsg">Ticket served.</span>
+        </div>
+        <button type="button" id="btnKitchenUndo" class="kds-undo-btn">Undo (5s)</button>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         3. POS PAGE (Full Interactive System)
+         ----------------------------------------------------------------------- -->
+    <section id="page-pos" class="page-view">
+      
+      <!-- POS VIEW A: Interactive Table Grid -->
+      <div id="posViewA" class="pos-subview active">
+        <div class="pos-tables-header">
+          <div class="pos-header-left">
+            <h1 class="page-title">Interactive Tables</h1>
+          </div>
+          <div class="pos-header-right">
+            <button id="btnLiveTablesModal" class="btn btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>Live Tables (<span id="btnLiveTablesCount">0</span>)</span>
+              <span id="posReadyFoodBadge" class="ready-food-alert-badge" style="display: none;" title="Food ready for pickup!">🔔 <span id="posReadyFoodCount">0</span> Ready</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section Filter Segmented Tabs -->
+        <div class="section-tabs-wrapper">
+          <div class="section-tabs" id="posSectionTabs">
+            <!-- Dynamically populated e.g. All, Main Hall, AC Section -->
+          </div>
+        </div>
+
+        <!-- Table Grid Container -->
+        <div class="table-grid" id="posTablesGrid">
+          <!-- Dynamically populated table cards -->
+        </div>
+      </div>
+
+      <!-- POS VIEW B: Two-Column Menu & Order Terminal -->
+      <div id="posViewB" class="pos-subview">
+        
+        <!-- Two-Column Terminal Layout -->
+        <div class="pos-terminal-grid">
+          
+          <!-- LEFT COLUMN: Categories & Dishes Drill-Down -->
+          <div class="pos-menu-column">
+            
+            <!-- Breadcrumb Navigation Bar -->
+            <div class="nav-breadcrumbs-bar">
+              <button id="btnBackToTables" class="btn btn-ghost btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                <span>Back to Tables</span>
+              </button>
+              <div class="breadcrumb-trail" id="posBreadcrumbTrail">
+                <span class="breadcrumb-item active" data-level="root">Menu</span>
+              </div>
+            </div>
+            
+            <!-- Category Navigation Cards -->
+            <div class="category-grid-section">
+              <div class="section-label-bar">
+                <h3 class="column-subtitle" id="posCategorySectionTitle">Categories</h3>
+                <span class="items-count-badge" id="posCategoryCountBadge">0 categories</span>
+              </div>
+              <div class="category-cards-grid" id="posCategoryCardsGrid">
+                <!-- Dynamically populated category cards -->
+              </div>
+            </div>
+
+            <!-- Combo Deals Section -->
+            <div class="combos-section" id="posCombosSection">
+              <div class="section-label-bar">
+                <div class="combo-title-wrap">
+                  <span class="orange-badge">Special Deals</span>
+                  <h3 class="column-subtitle">Combos & Value Meals</h3>
+                </div>
+              </div>
+              <div class="combos-cards-grid" id="posCombosCardsGrid">
+                <!-- Dynamically populated combo deal cards -->
+              </div>
+            </div>
+
+            <!-- Dishes Grid Section -->
+            <div class="dishes-grid-section">
+              <div class="section-label-bar">
+                <h3 class="column-subtitle" id="posDishesSectionTitle">Dishes</h3>
+                <span class="items-count-badge" id="posDishesCountBadge">0 items</span>
+              </div>
+              <div class="dishes-cards-grid" id="posDishesCardsGrid">
+                <!-- Dynamically populated dish item cards -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: Sticky Order Cart Panel -->
+          <div class="pos-cart-column">
+            <div class="card cart-panel">
+              
+              <!-- Cart Header -->
+              <div class="cart-header">
+                <div class="cart-table-info">
+                  <h2 class="cart-table-title" id="cartTableTitle">Table T-1</h2>
+                  <span class="cart-section-pill" id="cartSectionPill">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span id="cartSectionName">Main Hall</span>
+                  </span>
+                </div>
+
+                <!-- Merged Instant Search Bar with Autocomplete Dropdown -->
+                <div class="pos-search-wrapper in-panel">
+                  <div class="pos-search-input-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"/>
+                      <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+                    </svg>
+                    <input 
+                      type="text" 
+                      id="posGlobalSearchInput" 
+                      class="pos-search-input" 
+                      placeholder="Search dish or code... (/)" 
+                      autocomplete="off"
+                    >
+                    <kbd class="search-kbd">/</kbd>
+                  </div>
+                  <!-- Autocomplete Dropdown -->
+                  <div class="pos-search-dropdown" id="posSearchDropdown"></div>
+                </div>
+
+                <!-- Segmented Order Type Pill -->
+                <div class="order-type-segmented" id="cartOrderTypeSegmented">
+                  <button type="button" class="order-type-btn active" data-type="dine-in">
+                    <span class="order-type-icon">🍽️</span> <span class="order-type-text">Dine-In</span>
+                  </button>
+                  <button type="button" class="order-type-btn" data-type="takeaway">
+                    <span class="order-type-icon">🛍️</span> <span class="order-type-text">Takeaway</span>
+                  </button>
+                  <button type="button" class="order-type-btn" data-type="delivery">
+                    <span class="order-type-icon">🚚</span> <span class="order-type-text">Delivery</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Cart Line Items Container -->
+              <div class="cart-items-container" id="cartItemsContainer">
+                <div class="cart-empty-placeholder">
+                  <div class="empty-icon-wrap-sm">🛒</div>
+                  <p class="cart-empty-title">Cart is empty</p>
+                  <p class="cart-empty-sub">Tap any dish or combo on the left to add items to this order.</p>
+                </div>
+              </div>
+
+              <!-- Chef Instructions / Kitchen Note Input -->
+              <div class="cart-chef-notes-wrap" id="cartChefNotesWrap">
+                <input type="text" id="cartChefNotesInput" class="form-input chef-notes-input" placeholder="👨‍🍳 Kitchen / Chef Instructions (e.g. Less spicy, crispy base...)" maxlength="120">
+              </div>
+
+              <!-- Cart Summary & Calculation -->
+              <div class="cart-summary-section">
+                <div class="summary-line">
+                  <span class="summary-label">Subtotal</span>
+                  <span class="summary-value" id="cartSubtotalText">₹0.00</span>
+                </div>
+                <div class="summary-line">
+                  <div class="summary-label-interactive">
+                    <span>Discount</span>
+                    <button type="button" class="summary-btn-link" id="btnOpenDiscountModal">+ Set</button>
+                  </div>
+                  <span class="summary-value discount-text" id="cartDiscountText">- ₹0.00</span>
+                </div>
+                <div class="summary-line">
+                  <div class="summary-label-interactive">
+                    <span>Tax (GST <span id="cartTaxRateBadge">5%</span>)</span>
+                    <button type="button" class="summary-btn-link" id="btnOpenTaxModal">Change</button>
+                  </div>
+                  <span class="summary-value" id="cartTaxText">+ ₹0.00</span>
+                </div>
+                <div class="summary-divider"></div>
+                <div class="summary-line grand-total-line">
+                  <span class="grand-total-label">Grand Total</span>
+                  <span class="grand-total-value" id="cartGrandTotalText">₹0.00</span>
+                </div>
+              </div>
+
+              <!-- Cart Actions -->
+              <div class="cart-actions-bar" id="cartActionsBar">
+                <!-- Dynamic KOT Actions Container (Tier 1: Above checkout when active) -->
+                <div class="kot-actions-container" id="kotActionsContainer"></div>
+
+                <!-- Core Actions (Tier 2: Clear & Checkout) -->
+                <div class="cart-main-actions">
+                  <button type="button" id="btnClearCart" class="btn btn-ghost" title="Clear all items on this table">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    </svg>
+                    <span>Clear</span>
+                  </button>
+
+                  <button type="button" id="btnProceedCheckout" class="btn btn-primary btn-checkout">
+                    <span id="btnProceedCheckoutLabel">Checkout</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         4. ENTRIES PAGE (Full Sales Journal & KPI Dashboard)
+         ----------------------------------------------------------------------- -->
+    <section id="page-entries" class="page-view">
+      
+      <!-- Page Header & Live Counters -->
+      <div class="page-header">
+        <div class="pos-tables-header">
+          <div>
+            <span class="tag-pill">Sales Journal</span>
+            <h1 class="page-title">Orders & Entries</h1>
+            <p class="page-subtitle">Real-time revenue metrics, past transaction history, and settled invoices.</p>
+          </div>
+          <div class="entries-header-actions">
+            <span class="entries-counter-pill" id="entriesCountPill">Showing 0 orders</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. KPI MINI-DASHBOARD (Summary Strip) -->
+      <div class="entries-kpi-grid" id="entriesKpiStrip">
+        
+        <!-- Metric 1: Total Revenue -->
+        <div class="card kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-label">Total Revenue</span>
+            <span class="kpi-icon-wrap">₹</span>
+          </div>
+          <div class="kpi-value" id="kpiTotalRevenue">₹0.00</div>
+          <div class="kpi-subtext">Filtered sales volume</div>
+        </div>
+
+        <!-- Metric 2: Transactions Count -->
+        <div class="card kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-label">Transactions Count</span>
+            <span class="kpi-icon-wrap">🧾</span>
+          </div>
+          <div class="kpi-value" id="kpiOrderCount">0 Orders</div>
+          <div class="kpi-subtext">Settled invoices</div>
+        </div>
+
+        <!-- Metric 3: Average Bill Value (ABV) -->
+        <div class="card kpi-card">
+          <div class="kpi-card-header">
+            <span class="kpi-label">Average Bill Value</span>
+            <span class="kpi-icon-wrap">📊</span>
+          </div>
+          <div class="kpi-value" id="kpiAbvValue">₹0.00</div>
+          <div class="kpi-subtext">Total Revenue ÷ Orders</div>
+        </div>
+
+        <!-- Metric 4: Payment Split -->
+        <div class="card kpi-card kpi-card-split">
+          <div class="kpi-card-header">
+            <span class="kpi-label">Payment Split</span>
+            <span class="kpi-icon-wrap">⚖️</span>
+          </div>
+          <div class="kpi-split-breakdown" id="kpiPaymentSplit">
+            <div class="split-pill"><span class="split-tag">Cash</span> <strong id="kpiSplitCash">₹0</strong></div>
+            <div class="split-pill"><span class="split-tag">UPI</span> <strong id="kpiSplitUpi">₹0</strong></div>
+            <div class="split-pill"><span class="split-tag">Card</span> <strong id="kpiSplitCard">₹0</strong></div>
+          </div>
+          <div class="kpi-subtext">Real-time collections breakdown</div>
+        </div>
+
+      </div>
+
+      <!-- 2. SEARCH, FILTER & CONTROL TOOLBAR -->
+      <div class="card entries-toolbar-card" id="entriesToolbar">
+        
+        <!-- Search Input -->
+        <div class="entries-search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+          </svg>
+          <input 
+            type="text" 
+            id="entriesSearchInput" 
+            class="form-input form-input-search" 
+            placeholder="Search customer phone or Order # (e.g. 98765 or INV-)..."
+          >
+          <button type="button" id="btnClearEntriesSearch" class="btn-clear-search" style="display: none;">&times;</button>
+        </div>
+
+        <!-- Date Filter Segmented Pills & Custom Date Picker -->
+        <div class="entries-filter-group">
+          <div class="segmented-control date-segmented" id="entriesDatePills">
+            <button type="button" class="subnav-btn active" data-date="all">All Time</button>
+            <button type="button" class="subnav-btn" data-date="today">Today</button>
+            <button type="button" class="subnav-btn" data-date="yesterday">Yesterday</button>
+          </div>
+          <input type="date" id="entriesDatePicker" class="form-input form-input-sm date-picker-input" title="Choose specific date">
+        </div>
+
+        <!-- Payment Mode Filter Dropdown -->
+        <div class="entries-filter-group">
+          <select id="entriesPaymentFilter" class="form-input form-input-sm payment-filter-select">
+            <option value="all">All Payment Modes</option>
+            <option value="cash">Cash Only</option>
+            <option value="upi">UPI Only</option>
+            <option value="card">Card Only</option>
+            <option value="split">Split Only</option>
+          </select>
+        </div>
+
+        <!-- Reset Button -->
+        <button type="button" id="btnResetEntriesFilters" class="btn btn-secondary btn-sm btn-reset-filters">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          <span>Reset</span>
+        </button>
+
+      </div>
+
+      <!-- 3. TRANSACTIONS RECORD TABLE & MOBILE CARDS -->
+      <div class="entries-content-wrap">
+        
+        <!-- Desktop Table Container (>=768px) -->
+        <div class="card entries-table-card table-responsive" id="entriesDesktopTableWrap">
+          <table class="data-table entries-data-table">
+            <thead>
+              <tr>
+                <th>Customer Mobile</th>
+                <th>Date & Time</th>
+                <th>Order / Table</th>
+                <th>Net Amount</th>
+                <th>Payment Mode</th>
+                <th>Ordered Items Summary</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="entriesTableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards List (<768px) -->
+        <div class="entries-mobile-cards-wrap" id="entriesMobileCardsWrap">
+          <!-- Dynamically populated mobile order cards -->
+        </div>
+
+        <!-- Empty state placeholder when no matches -->
+        <div class="card empty-card" id="entriesEmptyPlaceholder" style="display: none;">
+          <div class="empty-icon-wrap">🔍</div>
+          <h3 class="empty-title">No transactions found</h3>
+          <p class="empty-desc">No orders match the current search or date filters. Try resetting the filters or placing new orders in the POS.</p>
+        </div>
+
+        <!-- Batch Pagination ("Load More" button) -->
+        <div class="entries-pagination-bar" id="entriesPaginationBar" style="display: none;">
+          <button type="button" id="btnLoadMoreEntries" class="btn btn-secondary">
+            <span>Load More Records (Showing <span id="paginatedShowingCount">0</span> of <span id="paginatedTotalCount">0</span>)</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         5. ADMIN PAGE (Password Gated Workspace)
+         ----------------------------------------------------------------------- -->
+    <section id="page-admin" class="page-view">
+      
+      <!-- Security Gate: Password Login Card -->
+      <div id="adminSecurityGate" class="admin-gate-wrap active">
+        <div class="card security-gate-card">
+          <div class="gate-icon-wrap">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <span class="tag-pill">Protected Area</span>
+          <h2 class="gate-title">Admin Authorization</h2>
+          <p class="gate-desc">Enter the administrative passcode to access restaurant configuration, menu builder, and theming.</p>
+          
+          <form id="adminLoginForm" class="gate-form">
+            <div class="form-group">
+              <label for="adminGatePassword" class="form-label">Password</label>
+              <div class="password-input-wrap">
+                <input 
+                  type="password" 
+                  id="adminGatePassword" 
+                  class="form-input" 
+                  placeholder="Enter admin password (Default: 1234)" 
+                  required 
+                  autocomplete="current-password"
+                >
+                <button type="button" id="btnToggleGatePassword" class="btn-toggle-eye" aria-label="Toggle password visibility">
+                  👁️
+                </button>
+              </div>
+            </div>
+            
+            <div id="gateErrorBadge" class="gate-error-badge" style="display: none;">
+              Incorrect password. Please try again.
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              Unlock Management Panel
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Admin Management Shell (Unlocked state) -->
+      <div id="adminWorkspace" class="admin-workspace-wrap" style="display: none;">
+        
+        <div class="admin-layout-shell">
+          
+          <!-- Admin Sidebar Navigation -->
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+              <span class="orange-badge">Config</span>
+              <h3 class="admin-nav-heading">POS Management</h3>
+            </div>
+            <nav class="admin-nav-menu">
+              <button type="button" class="admin-nav-item active" data-tab="tabMenuTables">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3h7v7H3z"/>
+                  <path d="M14 3h7v7h-7z"/>
+                  <path d="M14 14h7v7h-7z"/>
+                  <path d="M3 14h7v7H3z"/>
+                </svg>
+                <span>Menu & Tables</span>
+              </button>
+              <button type="button" class="admin-nav-item" data-tab="tabTheming">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m4.93 4.93 4.24 4.24"/>
+                  <path d="m14.83 9.17 4.24-4.24"/>
+                  <path d="m14.83 14.83 4.24 4.24"/>
+                  <path d="m9.17 14.83-4.24 4.24"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+                <span>Appearance & Themes</span>
+              </button>
+              <button type="button" class="admin-nav-item" data-tab="tabSecurity">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span>Security & Password</span>
+              </button>
+              <button type="button" class="admin-nav-item" data-tab="tabRestaurant">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Restaurant Details</span>
+              </button>
+              <button type="button" class="admin-nav-item" data-tab="tabKotSettings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+                  <line x1="6" x2="18" y1="17" y2="17"/>
+                </svg>
+                <span>KOT Workflow</span>
+              </button>
+            </nav>
+
+            <div class="admin-sidebar-footer">
+              <button type="button" id="btnLockAdmin" class="btn btn-ghost btn-sm btn-block">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span>Lock Panel</span>
+              </button>
+            </div>
+          </aside>
+
+          <!-- Admin Panels Area -->
+          <div class="admin-main-panel">
+            
+            <!-- ===============================================================
+                 TAB 1: MENU & TABLES SETUP
+                 =============================================================== -->
+            <div id="tabMenuTables" class="admin-tab-content active">
+              
+              <!-- Tab 1 Sub-Segmented Navigation -->
+              <div class="admin-subnav-bar">
+                <div class="segmented-control">
+                  <button type="button" class="subnav-btn active" data-subtab="subtabSections">Table Layout & Sections</button>
+                  <button type="button" class="subnav-btn" data-subtab="subtabMenuTree">Visual Menu Tree Editor</button>
+                  <button type="button" class="subnav-btn" data-subtab="subtabCombos">Combo Meal Builder</button>
+                </div>
+              </div>
+
+              <!-- SUBTAB 1A: Table Layout & Sections -->
+              <div id="subtabSections" class="admin-subpanel active">
+                <div class="card admin-section-card">
+                  <div class="card-header-flex">
+                    <div>
+                      <h2 class="card-title">Dining Sections & Tables</h2>
+                      <p class="card-description">Create floor zones (e.g. Main Hall, AC Lounge, Rooftop) and configure table quantities.</p>
+                    </div>
+                    <button type="button" id="btnAddSectionModal" class="btn btn-primary btn-sm">
+                      + Add New Section
+                    </button>
+                  </div>
+
+                  <div class="sections-list-container" id="adminSectionsList">
+                    <!-- Dynamically populated section accordions -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBTAB 1B: Visual Menu Tree Editor -->
+              <div id="subtabMenuTree" class="admin-subpanel">
+                <div class="card admin-section-card">
+                  <div class="card-header-flex">
+                    <div>
+                      <h2 class="card-title">Visual Menu Tree Editor</h2>
+                      <p class="card-description">Organize categories, subcategories, dishes, portion sizes, and add-on toppings.</p>
+                    </div>
+                    <button type="button" id="btnAddRootCategoryModal" class="btn btn-primary btn-sm">
+                      + Add Root Category
+                    </button>
+                  </div>
+
+                  <!-- Tree Quick Search Bar -->
+                  <div class="tree-search-bar">
+                    <input 
+                      type="text" 
+                      id="menuTreeSearchInput" 
+                      class="form-input form-input-sm" 
+                      placeholder="Type to filter categories or dishes in the tree..."
+                    >
+                  </div>
+
+                  <!-- Recursive Visual Menu Tree Container -->
+                  <div class="menu-tree-container" id="adminMenuTreeContainer">
+                    <!-- Dynamically generated recursive tree nodes -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBTAB 1C: Combo Meal Builder -->
+              <div id="subtabCombos" class="admin-subpanel">
+                <div class="card admin-section-card">
+                  <div class="card-header-flex">
+                    <div>
+                      <h2 class="card-title">Combo Meal Packages</h2>
+                      <p class="card-description">Bundle dishes into special discounted meal deals with required items or pick-any choices.</p>
+                    </div>
+                    <button type="button" id="btnAddComboModal" class="btn btn-primary btn-sm">
+                      + Add Combo Deal
+                    </button>
+                  </div>
+
+                  <div class="combos-list-container" id="adminCombosList">
+                    <!-- Dynamically populated combo list cards -->
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- ===============================================================
+                 TAB 2: APPEARANCE & THEMES
+                 =============================================================== -->
+            <div id="tabTheming" class="admin-tab-content">
+              <div class="card admin-section-card">
+                <div class="card-header">
+                  <h2 class="card-title">Interface Themes & Typography</h2>
+                  <p class="card-description">Select from 6 curated design palettes adhering to the zinc editorial guidelines, and choose global font style.</p>
+                </div>
+
+                <div class="theme-presets-section">
+                  <h3 class="settings-subheading">Color Palette Presets</h3>
+                  <div class="theme-cards-grid" id="themeCardsGrid">
+                    
+                    <!-- 1. Light Minimal (Default) -->
+                    <div class="theme-card active" data-theme="light-minimal">
+                      <div class="theme-swatch swatch-light-minimal">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Light Minimal</h4>
+                        <p class="theme-desc">Editorial zinc scale with vivid ember accents (Design.md default)</p>
+                      </div>
+                    </div>
+
+                    <!-- 2. Dark Glass -->
+                    <div class="theme-card" data-theme="dark-glass">
+                      <div class="theme-swatch swatch-dark-glass">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Dark Glass</h4>
+                        <p class="theme-desc">Deep obsidian surfaces with hairline slate borders</p>
+                      </div>
+                    </div>
+
+                    <!-- 3. Tuscan Bistro -->
+                    <div class="theme-card" data-theme="tuscan-bistro">
+                      <div class="theme-swatch swatch-tuscan-bistro">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Tuscan Bistro</h4>
+                        <p class="theme-desc">Warm linen paper, toasted stone, and rustic terracotta accents</p>
+                      </div>
+                    </div>
+
+                    <!-- 4. Nordic Pine -->
+                    <div class="theme-card" data-theme="nordic-pine">
+                      <div class="theme-swatch swatch-nordic-pine">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Nordic Pine</h4>
+                        <p class="theme-desc">Deep forest slate with sage highlights and crisp bone-white text</p>
+                      </div>
+                    </div>
+
+                    <!-- 5. Espresso Roastery -->
+                    <div class="theme-card" data-theme="espresso-roastery">
+                      <div class="theme-swatch swatch-espresso-roastery">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Espresso Roastery</h4>
+                        <p class="theme-desc">Roasted dark mahogany with warm crema ink and bronze amber</p>
+                      </div>
+                    </div>
+
+                    <!-- 6. Tokyo Teahouse -->
+                    <div class="theme-card" data-theme="tokyo-teahouse">
+                      <div class="theme-swatch swatch-tokyo-teahouse">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Tokyo Teahouse</h4>
+                        <p class="theme-desc">Minimalist wabi-sabi paper paired with organic matcha green</p>
+                      </div>
+                    </div>
+
+                    <!-- 7. Crimson Amber -->
+                    <div class="theme-card" data-theme="crimson-amber">
+                      <div class="theme-swatch swatch-crimson-amber">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Crimson Amber</h4>
+                        <p class="theme-desc">Warm upscale dining palette with rich ruby and amber ink</p>
+                      </div>
+                    </div>
+
+                    <!-- 8. Emerald Bistro -->
+                    <div class="theme-card" data-theme="emerald-bistro">
+                      <div class="theme-swatch swatch-emerald-bistro">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Emerald Bistro</h4>
+                        <p class="theme-desc">Fresh organic garden greens paired with clean stone paper</p>
+                      </div>
+                    </div>
+
+                    <!-- 9. Sunset Glow -->
+                    <div class="theme-card" data-theme="sunset-glow">
+                      <div class="theme-swatch swatch-sunset-glow">
+                        <span class="swatch-circle swatch-bg"></span>
+                        <span class="swatch-circle swatch-primary"></span>
+                        <span class="swatch-circle swatch-accent"></span>
+                      </div>
+                      <div class="theme-card-info">
+                        <h4 class="theme-name">Sunset Glow</h4>
+                        <p class="theme-desc">Warm terracotta and golden honey accents</p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div class="font-selection-section">
+                  <h3 class="settings-subheading">Global Typography</h3>
+                  <div class="form-group" style="max-width: 420px;">
+                    <label for="fontSelect" class="form-label">Font Family</label>
+                    <select id="fontSelect" class="form-input">
+                      <option value="dm-sans">DM Sans (Cosmica Geometry - Default)</option>
+                      <option value="manrope">Manrope (Modern European Sans)</option>
+                      <option value="inter">Inter (Dense Marketplace / Clean UI)</option>
+                      <option value="plus-jakarta">Plus Jakarta Sans (Modern Clean Sans)</option>
+                      <option value="urbanist">Urbanist (Editorial Clean Geometry)</option>
+                      <option value="outfit">Outfit (Warm Geometric Display)</option>
+                      <option value="instrument">Instrument Sans (Refined Swiss Precision)</option>
+                      <option value="playfair">Playfair Display (Bistro & Fine Dining Serif)</option>
+                      <option value="space-grotesk">Space Grotesk (Tech Editorial)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 24px;">
+                  <button type="button" id="btnSaveAppearance" class="btn btn-primary">
+                    Save Appearance Settings
+                  </button>
+                  <span id="themeFeedback" class="form-feedback"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===============================================================
+                 TAB 3: SECURITY & CREDENTIALS
+                 =============================================================== -->
+            <div id="tabSecurity" class="admin-tab-content">
+              <div class="card admin-section-card">
+                <div class="card-header">
+                  <h2 class="card-title">Security & Password</h2>
+                  <p class="card-description">Update the master passcode required to access this administrative panel.</p>
+                </div>
+
+                <form id="changePasswordForm" class="admin-form" style="max-width: 480px;">
+                  <div class="form-group">
+                    <label for="currentPasswordInput" class="form-label">Current Passcode</label>
+                    <input type="password" id="currentPasswordInput" class="form-input" required placeholder="Enter current passcode">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="newPasswordInput" class="form-label">New Passcode</label>
+                    <input type="password" id="newPasswordInput" class="form-input" required placeholder="Enter new passcode (min. 4 characters)">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="confirmPasswordInput" class="form-label">Confirm New Passcode</label>
+                    <input type="password" id="confirmPasswordInput" class="form-input" required placeholder="Repeat new passcode">
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" id="btnSavePassword" class="btn btn-primary">
+                      Update Passcode
+                    </button>
+                    <span id="passwordFeedback" class="form-feedback"></span>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- ===============================================================
+                 TAB 4: RESTAURANT DETAILS & BRANDING
+                 =============================================================== -->
+            <div id="tabRestaurant" class="admin-tab-content">
+              <div class="card admin-section-card">
+                <div class="card-header">
+                  <h2 class="card-title">Business Information & Receipts</h2>
+                  <p class="card-description">These details appear in the top header and on customer thermal receipts.</p>
+                </div>
+
+                <form id="adminDetailsForm" class="admin-form" style="max-width: 600px;">
+                  <div class="form-group">
+                    <label for="adminRestaurantName" class="form-label">Restaurant Name</label>
+                    <input type="text" id="adminRestaurantName" class="form-input" required placeholder="e.g. Copper Chimney Bistro">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="adminRestaurantPhone" class="form-label">Contact Phone</label>
+                    <input type="tel" id="adminRestaurantPhone" class="form-input" required placeholder="e.g. +91 98765 43210">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="adminRestaurantAddress" class="form-label">Physical Address</label>
+                    <textarea id="adminRestaurantAddress" class="form-input form-textarea" rows="3" required placeholder="e.g. 104 Main Street, Downtown Market, Suite 4B"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="adminReceiptFooter" class="form-label">Receipt Footer Note</label>
+                    <input type="text" id="adminReceiptFooter" class="form-input" placeholder="e.g. Thank You, Visit Again! • FSSAI Lic. 1002003004">
+                  </div>
+
+                  <div class="form-actions">
+                    <button type="submit" id="btnSaveDetails" class="btn btn-primary">
+                      Save Restaurant Details
+                    </button>
+                    <span id="detailsFeedback" class="form-feedback"></span>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- ===============================================================
+                 TAB 5: KOT WORKFLOW SETTINGS
+                 =============================================================== -->
+            <div id="tabKotSettings" class="admin-tab-content">
+              <div class="admin-panel-header">
+                <div>
+                  <h2 class="admin-panel-title">KOT Workflow Configuration</h2>
+                  <p class="admin-panel-subtitle">Configure how Kitchen Order Tickets (KOT) are generated, printed, and routed to the kitchen.</p>
+                </div>
+              </div>
+
+              <div class="card" style="max-width: 860px;">
+                <div class="kot-workflow-options-grid" id="kotWorkflowOptionsGrid">
+                  <!-- Option 1: Automatic KOT -->
+                  <div class="kot-workflow-card active" data-workflow="auto">
+                    <div class="workflow-card-radio">
+                      <input type="radio" name="kotWorkflowChoice" id="kotChoiceAuto" value="auto" checked>
+                    </div>
+                    <div class="workflow-card-body">
+                      <div class="workflow-card-header">
+                        <span class="workflow-badge">⚡ Instant Dispatch</span>
+                        <h3 class="workflow-title">1. Automatic KOT (Quick Service / Fast Food)</h3>
+                      </div>
+                      <p class="workflow-desc">
+                        KOT triggers automatically with zero manual clicks upon placing orders or entering checkout. Recommended for fast food, cloud kitchens, and self-order setups.
+                      </p>
+                      <div class="workflow-feature-list">
+                        <span class="workflow-feat-tag">✓ Zero manual intervention</span>
+                        <span class="workflow-feat-tag">✓ Instant kitchen sync</span>
+                        <span class="workflow-feat-tag">✓ Auto-prints if printer paired</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Option 2: KOT Only -->
+                  <div class="kot-workflow-card" data-workflow="kot_only">
+                    <div class="workflow-card-radio">
+                      <input type="radio" name="kotWorkflowChoice" id="kotChoiceKotOnly" value="kot_only">
+                    </div>
+                    <div class="workflow-card-body">
+                      <div class="workflow-card-header">
+                        <span class="workflow-badge">🍳 Manual Dispatch</span>
+                        <h3 class="workflow-title">2. KOT Only (Cafes & Casual Dining)</h3>
+                      </div>
+                      <p class="workflow-desc">
+                        POS cart displays a dedicated <strong>"🍳 Send KOT"</strong> button. Waitstaff build the course and explicitly send the ticket to the kitchen when the guest finishes ordering.
+                      </p>
+                      <div class="workflow-feature-list">
+                        <span class="workflow-feat-tag">✓ Dedicated "Send KOT" button</span>
+                        <span class="workflow-feat-tag">✓ Multi-course control</span>
+                        <span class="workflow-feat-tag">✓ Digital KDS only (No paper)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Option 3: KOT & Print -->
+                  <div class="kot-workflow-card" data-workflow="kot_print">
+                    <div class="workflow-card-radio">
+                      <input type="radio" name="kotWorkflowChoice" id="kotChoiceKotPrint" value="kot_print">
+                    </div>
+                    <div class="workflow-card-body">
+                      <div class="workflow-card-header">
+                        <span class="workflow-badge">🖨️ Hybrid Screen & Paper</span>
+                        <h3 class="workflow-title">3. KOT & Print (Fine Dining & Stations)</h3>
+                      </div>
+                      <p class="workflow-desc">
+                        POS cart displays both <strong>"🍳 Send KOT"</strong> and <strong>"🖨️ KOT + Print"</strong> buttons. Sends electronic ticket to KDS and prints a physical thermal kitchen slip for cooks.
+                      </p>
+                      <div class="workflow-feature-list">
+                        <span class="workflow-feat-tag">✓ Dual Action Buttons</span>
+                        <span class="workflow-feat-tag">✓ 58mm / 80mm Thermal KOT Slips</span>
+                        <span class="workflow-feat-tag">✓ Digital Screen + Paper Hybrid</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="kot-settings-footer-actions">
+                  <button type="button" id="btnSaveKotSettings" class="btn btn-primary">
+                    Save KOT Workflow Preferences
+                  </button>
+                  <span id="kotSettingsFeedback" class="form-feedback"></span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       MODALS SYSTEM
+       ========================================================================= -->
+
+  <!-- 1. LIVE TABLES OVERVIEW MODAL -->
+  <div id="modalLiveTables" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <span class="tag-pill">Floor Status</span>
+          <h2 class="modal-title">Live Occupied Tables</h2>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalLiveTables">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Section</th>
+                <th>Status</th>
+                <th>Elapsed Time</th>
+                <th>Items Ordered</th>
+                <th>Running Total</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="liveTablesTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="modalLiveTables">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. VARIANT / SIZE & ADD-ON CUSTOMIZER MODAL -->
+  <div id="modalVariantCustomizer" class="modal-backdrop">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <span class="veg-badge" id="customizerVegBadge"></span>
+          <h2 class="modal-title" id="customizerDishTitle">Customize Dish</h2>
+          <p class="modal-subtitle" id="customizerDishDesc">Choose your preferred portion size and extra toppings.</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalVariantCustomizer">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Portion Size Radios -->
+        <div class="customizer-group" id="customizerSizesGroup">
+          <label class="customizer-group-title">Portion Size</label>
+          <div class="sizes-options-grid" id="customizerSizesContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Add-on Extras Checklist -->
+        <div class="customizer-group" id="customizerAddonsGroup">
+          <label class="customizer-group-title">Add-ons & Toppings</label>
+          <div class="addons-options-list" id="customizerAddonsContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <div class="customizer-price-wrap">
+          <span class="customizer-price-label">Total Item Price</span>
+          <span class="customizer-price-val" id="customizerTotalPriceText">₹0.00</span>
+        </div>
+        <button type="button" id="btnCustomizerAddToCart" class="btn btn-primary">
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. COMBO RESOLVER MODAL -->
+  <div id="modalComboResolver" class="modal-backdrop">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <span class="orange-badge">Combo Pack</span>
+          <h2 class="modal-title" id="comboResolverTitle">Select Combo Choices</h2>
+          <p class="modal-subtitle" id="comboResolverDesc">Select the included items to customize this value meal.</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalComboResolver">&times;</button>
+      </div>
+      <div class="modal-body" id="comboResolverBody">
+        <!-- Dynamically generated choice pickers -->
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <div class="customizer-price-wrap">
+          <span class="customizer-price-label">Package Price</span>
+          <span class="customizer-price-val" id="comboResolverPriceText">₹0.00</span>
+        </div>
+        <button type="button" id="btnComboAddToCart" class="btn btn-primary">
+          Add Combo to Order
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. DISCOUNT SELECTOR MODAL -->
+  <div id="modalDiscount" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title">Apply Discount</h2>
+        <button type="button" class="modal-close-btn" data-close="modalDiscount">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="segmented-control" style="margin-bottom: 16px;">
+          <button type="button" class="subnav-btn active" id="btnDiscountModePercent">% Percentage</button>
+          <button type="button" class="subnav-btn" id="btnDiscountModeFlat">₹ Flat Amount</button>
+        </div>
+        <div class="form-group">
+          <label for="discountValueInput" class="form-label" id="discountValueLabel">Discount Percentage (%)</label>
+          <input type="number" id="discountValueInput" class="form-input" placeholder="e.g. 10" min="0" step="any">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="btnRemoveDiscount">Remove Discount</button>
+        <button type="button" class="btn btn-primary" id="btnApplyDiscount">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. TAX / GST SELECTOR MODAL -->
+  <div id="modalTax" class="modal-backdrop">
+    <div class="modal-card modal-sm tax-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">GST & Tax Rate</h2>
+          <p class="modal-subtitle">Select a standard GST tier or set custom tax percentage.</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalTax">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Preset Chips -->
+        <label class="form-label" style="margin-bottom: 8px;">Standard GST Presets</label>
+        <div class="tax-presets-grid" id="taxPresetsGrid">
+          <button type="button" class="tax-preset-chip" data-rate="0">
+            <span class="tax-preset-rate">0%</span>
+            <span class="tax-preset-label">Exempt / Nil</span>
+          </button>
+          <button type="button" class="tax-preset-chip active" data-rate="5">
+            <span class="tax-preset-rate">5%</span>
+            <span class="tax-preset-label">Food & Bev</span>
+          </button>
+          <button type="button" class="tax-preset-chip" data-rate="12">
+            <span class="tax-preset-rate">12%</span>
+            <span class="tax-preset-label">Standard</span>
+          </button>
+          <button type="button" class="tax-preset-chip" data-rate="18">
+            <span class="tax-preset-rate">18%</span>
+            <span class="tax-preset-label">AC / Drinks</span>
+          </button>
+        </div>
+
+        <!-- Custom Tax Input Box -->
+        <div class="form-group" style="margin-top: 16px;">
+          <label for="taxCustomInput" class="form-label">Custom Tax Percentage (%)</label>
+          <div class="tax-input-wrap">
+            <input 
+              type="number" 
+              id="taxCustomInput" 
+              class="form-input tax-custom-field" 
+              min="0" 
+              max="100" 
+              step="any" 
+              placeholder="e.g. 5 or 7.5"
+            >
+            <span class="tax-input-symbol">%</span>
+          </div>
+        </div>
+
+        <!-- Live Calculation Preview -->
+        <div class="tax-preview-box" id="taxCalculationPreview">
+          <div class="tax-preview-row">
+            <span>Bill Subtotal</span>
+            <span id="taxPreviewSubtotal">₹0.00</span>
+          </div>
+          <div class="tax-preview-row tax-preview-highlight">
+            <span>Calculated Tax (<span id="taxPreviewRateBadge">5%</span>)</span>
+            <span id="taxPreviewAmount">+ ₹0.00</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="modalTax">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnApplyTax">Apply Tax Rate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 4-STEP CHECKOUT WIZARD MODAL (modalPosCheckout) -->
+  <div id="modalPosCheckout" class="modal-backdrop">
+    <div class="modal-card modal-xl checkout-wizard-card">
+      <button type="button" class="modal-close-btn wizard-close" data-close="modalPosCheckout">&times;</button>
+      
+      <div class="checkout-split-layout">
+        
+        <!-- LEFT: Live Order Summary -->
+        <div class="checkout-summary-pane">
+          <div class="summary-pane-header">
+            <span class="tag-pill" id="checkoutTablePill">Table T-1</span>
+            <h3 class="summary-pane-title">Order Summary</h3>
+          </div>
+          <div class="checkout-items-list" id="checkoutItemsList">
+            <!-- Dynamically populated cart items preview -->
+          </div>
+          <div class="checkout-math-box">
+            <div class="math-row">
+              <span>Subtotal:</span>
+              <span id="wizardSubtotalText">₹0.00</span>
+            </div>
+            <div class="math-row text-success">
+              <span>Discount:</span>
+              <span id="wizardDiscountText">- ₹0.00</span>
+            </div>
+            <div class="math-row">
+              <span>GST / Tax:</span>
+              <span id="wizardTaxText">+ ₹0.00</span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="math-row math-total">
+              <span>Net Payable:</span>
+              <span id="wizardGrandTotalText">₹0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: 4-Step Interactive Stepper -->
+        <div class="checkout-steps-pane">
+          
+          <!-- Stepper Indicator -->
+          <div class="wizard-stepper-header">
+            <div class="step-indicator active" data-step="1">
+              <span class="step-num">1</span>
+              <span class="step-name">Customer</span>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-indicator" data-step="2">
+              <span class="step-num">2</span>
+              <span class="step-name">Adjustments</span>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-indicator" data-step="3">
+              <span class="step-num">3</span>
+              <span class="step-name">Payment</span>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-indicator" data-step="4">
+              <span class="step-num">4</span>
+              <span class="step-name">Done</span>
+            </div>
+          </div>
+
+          <!-- STEP 1: Customer Identity -->
+          <div class="wizard-step-body active" id="wizardStep1">
+            <h3 class="step-headline">Customer Phone Number</h3>
+            <p class="step-subline">Enter customer 10-digit mobile number for e-bill and loyalty records, or proceed as guest.</p>
+            
+            <div class="form-group" style="margin-top: 24px;">
+              <label for="wizardCustomerPhone" class="form-label">Mobile Number</label>
+              <div class="phone-input-group">
+                <span class="phone-prefix">+91</span>
+                <input 
+                  type="tel" 
+                  id="wizardCustomerPhone" 
+                  class="form-input" 
+                  placeholder="98765 43210" 
+                  maxlength="10" 
+                  pattern="[0-9]{10}"
+                >
+              </div>
+              <span class="input-helper-text" id="phoneValidationMsg">Enter 10-digit mobile number</span>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" id="btnWizardGuestCheckout" class="btn btn-secondary">
+                Without Mobile (Guest)
+              </button>
+              <button type="button" id="btnWizardStep1Next" class="btn btn-primary">
+                Continue to Billing
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: Adjustments & Rewards -->
+          <div class="wizard-step-body" id="wizardStep2">
+            <h3 class="step-headline">Discounts & Tax Adjustments</h3>
+            <p class="step-subline">Review and tweak billing discounts or applicable tax rates before selecting payment.</p>
+
+            <div class="form-grid-2" style="margin-top: 20px;">
+              <div class="form-group">
+                <label for="wizardDiscountInput" class="form-label">Discount Amount (₹)</label>
+                <input type="number" id="wizardDiscountInput" class="form-input" min="0" step="any" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="wizardTaxInput" class="form-label">Tax Rate (%)</label>
+                <input type="number" id="wizardTaxInput" class="form-input" min="0" max="100" step="any" placeholder="5">
+              </div>
+            </div>
+
+            <div class="adjustment-preview-box">
+              <span class="preview-label">Final Amount to Collect:</span>
+              <span class="preview-val" id="wizardAdjustedTotalText">₹0.00</span>
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-secondary" id="btnWizardStep2Back">Back</button>
+              <button type="button" class="btn btn-primary" id="btnWizardStep2Next">Proceed to Payment</button>
+            </div>
+          </div>
+
+          <!-- STEP 3: Payment Method -->
+          <div class="wizard-step-body" id="wizardStep3">
+            <h3 class="step-headline">Select Payment Method</h3>
+            <p class="step-subline">Select how the customer is settling this invoice.</p>
+
+            <div class="payment-methods-grid">
+              <button type="button" class="pay-method-card active" data-method="cash">
+                <span class="pay-icon">💵</span>
+                <span class="pay-title">Cash</span>
+              </button>
+              <button type="button" class="pay-method-card" data-method="upi">
+                <span class="pay-icon">📱</span>
+                <span class="pay-title">UPI / QR Code</span>
+              </button>
+              <button type="button" class="pay-method-card" data-method="card">
+                <span class="pay-icon">💳</span>
+                <span class="pay-title">Card (POS Terminal)</span>
+              </button>
+              <button type="button" class="pay-method-card" data-method="split">
+                <span class="pay-icon">⚖️</span>
+                <span class="pay-title">Split Payment</span>
+              </button>
+            </div>
+
+            <!-- Dynamic UPI QR Code Preview -->
+            <div id="upiQrPreviewBox" class="upi-preview-box" style="display: none;">
+              <div class="upi-qr-image-wrap">
+                <img id="upiQrImage" src="" alt="UPI Payment QR Code" width="160" height="160">
+              </div>
+              <div class="upi-details">
+                <p class="upi-amount-badge">Scan & Pay: <strong id="upiAmountBadge">₹0.00</strong></p>
+                <p class="upi-hint">Compatible with Google Pay, PhonePe, Paytm, BHIM</p>
+              </div>
+            </div>
+
+            <!-- Split Payment Calculator Box -->
+            <div id="splitPaymentBox" class="split-payment-box" style="display: none;">
+              <div class="split-inputs-grid">
+                <div class="form-group">
+                  <label class="form-label">💵 Cash (₹)</label>
+                  <input type="number" id="splitCashInput" class="form-input split-input" value="0" min="0" step="any">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">📱 UPI (₹)</label>
+                  <input type="number" id="splitUpiInput" class="form-input split-input" value="0" min="0" step="any">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">💳 Card (₹)</label>
+                  <input type="number" id="splitCardInput" class="form-input split-input" value="0" min="0" step="any">
+                </div>
+              </div>
+              <div class="split-status-bar">
+                <span>Total: <strong id="splitTotalText">₹0</strong></span>
+                <span>Sum Entered: <strong id="splitSumText">₹0</strong></span>
+                <span>Remaining: <strong id="splitBalanceText" class="text-danger">₹0</strong></span>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label for="wizardBillNote" class="form-label">Bill Remark / Note</label>
+              <input type="text" id="wizardBillNote" class="form-input" placeholder="Bill Remark / Note">
+            </div>
+
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-secondary" id="btnWizardStep3Back">Back</button>
+              <button type="button" class="btn btn-primary" id="btnFinalizeOrder">
+                💾 Finalize Order & Settle Table
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 4: Success & Automation -->
+          <div class="wizard-step-body" id="wizardStep4">
+            <div class="success-screen-wrap">
+              <div class="success-checkmark-circle">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </div>
+              <span class="tag-pill text-success">Order Completed</span>
+              <h2 class="success-title">Payment Recorded Successfully</h2>
+              <p class="success-desc" id="successOrderSummaryText">Invoice #1001 settled for ₹1,240.00 via Cash.</p>
+
+              <div class="receipt-automation-actions">
+                <button type="button" id="btnPrintReceiptPreview" class="btn btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"/>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                    <rect width="12" height="8" x="6" y="14"/>
+                  </svg>
+                  <span>Print Receipt Preview</span>
+                </button>
+              </div>
+
+              <div class="wizard-actions" style="margin-top: 32px; justify-content: center;">
+                <button type="button" id="btnFinishOrderDone" class="btn btn-primary" style="min-width: 200px;">
+                  ✨ Next Order / Done
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 7. PRINTER & HARDWARE SETTINGS MODAL (From Navbar Bluetooth Button) -->
+  <div id="modalPrinterSettings" class="modal-backdrop">
+    <div class="modal-card modal-sm printer-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Printer & Paper Settings</h2>
+          <p class="modal-subtitle">Configure thermal printer connection & paper roll width.</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalPrinterSettings">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- 1. Bluetooth Connection Status Card -->
+        <div class="printer-status-card" id="printerConnectionStatusCard">
+          <div class="printer-status-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
+            </svg>
+          </div>
+          <div class="printer-status-info">
+            <div class="printer-status-headline" id="printerModalDeviceName">No Printer Paired</div>
+            <div class="printer-status-subline" id="printerModalSubline">Web Bluetooth wireless printer</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" id="btnPrinterModalAction">
+            Pair Device
+          </button>
+        </div>
+
+        <!-- 2. Thermal Paper Roll Size Selection -->
+        <div class="form-group" style="margin-top: 20px;">
+          <label class="form-label">Receipt Paper Roll Size</label>
+          <div class="paper-sizes-grid" id="paperSizesGrid">
+            <!-- 80mm Option -->
+            <div class="paper-size-card active" data-size="80mm">
+              <div class="paper-size-header">
+                <span class="paper-size-val">80mm</span>
+                <span class="paper-size-badge">Standard (3")</span>
+              </div>
+              <p class="paper-size-desc">Standard desktop counter POS printers (Epson, TVS, Sunmi, Star).</p>
+            </div>
+            <!-- 58mm Option -->
+            <div class="paper-size-card" data-size="58mm">
+              <div class="paper-size-header">
+                <span class="paper-size-val">58mm</span>
+                <span class="paper-size-badge">Compact (2")</span>
+              </div>
+              <p class="paper-size-desc">Portable handheld mini Bluetooth printers & mobile belt terminals.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Test Print Sample -->
+        <div class="printer-test-area" style="margin-top: 16px;">
+          <button type="button" class="btn btn-secondary w-full" id="btnTestPrintSample">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Test Print Sample Receipt</span>
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="modalPrinterSettings">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnSavePrinterSettings">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. THERMAL RECEIPT PREVIEW MODAL -->
+  <div id="modalReceiptPreview" class="modal-backdrop">
+    <div class="modal-card modal-receipt">
+      <div class="modal-header modal-header-split">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 class="modal-title">Receipt Preview</h3>
+          <span class="receipt-size-indicator" id="previewSizeBadge">80mm</span>
+        </div>
+        <div class="receipt-size-switcher-segmented" id="receiptPreviewSegmented">
+          <button type="button" class="receipt-size-toggle-btn active" data-size="80mm">80mm</button>
+          <button type="button" class="receipt-size-toggle-btn" data-size="58mm">58mm</button>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalReceiptPreview">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="receipt-paper" id="receiptPaperContainer">
+          <!-- Dynamically populated printable receipt -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="modalReceiptPreview">Close</button>
+        <button type="button" class="btn btn-primary" id="btnTriggerPrintWindow">Print Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. ADMIN: MODAL FOR ADDING/EDITING MENU TREE NODE -->
+  <div id="modalAdminNode" class="modal-backdrop">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalAdminNodeTitle">Add Menu Item</h2>
+        <button type="button" class="modal-close-btn" data-close="modalAdminNode">&times;</button>
+      </div>
+      <form id="formAdminNode">
+        <div class="modal-body">
+          <input type="hidden" id="nodeParentId">
+          <input type="hidden" id="nodeEditingId">
+          
+          <div class="form-group">
+            <label class="form-label">Item Type</label>
+            <div class="segmented-control" id="nodeTypeSegmented">
+              <button type="button" class="subnav-btn active" data-type="category">Category / Folder</button>
+              <button type="button" class="subnav-btn" data-type="dish">Dish / Beverage</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="nodeNameInput" class="form-label">Item Name</label>
+            <input type="text" id="nodeNameInput" class="form-input" placeholder="e.g. Margherita Pizza or Hot Beverages" required>
+          </div>
+
+          <!-- Dish Specific Fields with Smooth Transition -->
+          <div id="nodeDishFields" class="node-dish-fields-wrapper" aria-hidden="true">
+            <div class="node-dish-fields-inner">
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label for="nodeBasePriceInput" class="form-label">Base Price (₹)</label>
+                  <input type="number" id="nodeBasePriceInput" class="form-input" placeholder="0" min="0" step="any">
+                </div>
+                <div class="form-group">
+                  <label for="nodeDietSelect" class="form-label">Dietary Type</label>
+                  <select id="nodeDietSelect" class="form-input">
+                    <option value="veg">🟢 Pure Vegetarian</option>
+                    <option value="non-veg">🔴 Non-Vegetarian</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="nodeKeywordsInput" class="form-label">Search Keywords / Short Code</label>
+                <input type="text" id="nodeKeywordsInput" class="form-input" placeholder="e.g. marg, pizza, cheese (space or comma separated)">
+              </div>
+
+              <!-- Dynamic Sizes List -->
+              <div class="form-group">
+                <div class="card-header-flex" style="margin-bottom: 4px;">
+                  <div>
+                    <label class="form-label" style="margin-bottom: 2px;">Portion Sizes (Optional)</label>
+                    <p class="form-hint" style="font-size: 11px; color: var(--text-dim); margin: 0;">Leave empty for single-option dish, or add 2 or more sizes.</p>
+                  </div>
+                  <button type="button" id="btnAddSizeRow" class="btn btn-ghost btn-sm">+ Add Size</button>
+                </div>
+                <div id="nodeSizesRowsContainer" class="dynamic-rows-container">
+                  <!-- Size rows -->
+                </div>
+                <p id="nodeSizeMinWarning" class="form-hint" style="display: none; font-size: 11px; color: #e11d48; margin-top: 6px; font-weight: 500;">
+                  ⚠️ Minimum 2 sizes are required. Either add at least one more size, or remove all size rows for a single-option dish.
+                </p>
+              </div>
+
+              <!-- Dynamic Add-ons List -->
+              <div class="form-group">
+                <div class="card-header-flex" style="margin-bottom: 6px;">
+                  <label class="form-label">Toppings & Add-ons (Optional)</label>
+                  <button type="button" id="btnAddAddonRow" class="btn btn-ghost btn-sm">+ Add Topping</button>
+                </div>
+                <div id="nodeAddonsRowsContainer" class="dynamic-rows-container">
+                  <!-- Addon rows -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalAdminNode">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveAdminNode">Save Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. ADMIN: MODAL FOR ADDING/EDITING SECTION -->
+  <div id="modalAdminSection" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalAdminSectionTitle">Add Section</h2>
+        <button type="button" class="modal-close-btn" data-close="modalAdminSection">&times;</button>
+      </div>
+      <form id="formAdminSection">
+        <div class="modal-body">
+          <input type="hidden" id="sectionEditingId">
+          <div class="form-group">
+            <label for="sectionNameInput" class="form-label">Section Name</label>
+            <input type="text" id="sectionNameInput" class="form-input" placeholder="e.g. AC Lounge, Terrace, Garden" required>
+          </div>
+          <div class="form-group">
+            <label for="sectionTableCountInput" class="form-label">Number of Tables</label>
+            <input type="number" id="sectionTableCountInput" class="form-input" value="6" min="1" max="50" required>
+          </div>
+          <div class="form-group">
+            <label for="sectionDefaultCapacityInput" class="form-label">Default Table Capacity</label>
+            <input type="number" id="sectionDefaultCapacityInput" class="form-input" value="4" min="1" max="20" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalAdminSection">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Section</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9B. ADMIN: MODAL FOR EDITING INDIVIDUAL TABLE -->
+  <div id="modalAdminTable" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalAdminTableTitle">Edit Table</h2>
+        <button type="button" class="modal-close-btn" data-close="modalAdminTable">&times;</button>
+      </div>
+      <form id="formAdminTable">
+        <div class="modal-body">
+          <input type="hidden" id="tableEditingSecId">
+          <input type="hidden" id="tableEditingTableId">
+          <div class="form-group">
+            <label for="tableNameInput" class="form-label">Table Name / Label</label>
+            <input type="text" id="tableNameInput" class="form-input" placeholder="e.g. Table 1, VIP Booth, Terrace 4" required>
+          </div>
+          <div class="form-group">
+            <label for="tableCapacityInput" class="form-label">Seating Capacity</label>
+            <input type="number" id="tableCapacityInput" class="form-input" min="1" max="50" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalAdminTable">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Table</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. ADMIN: MODAL FOR ADDING/EDITING COMBO DEAL -->
+  <div id="modalAdminCombo" class="modal-backdrop">
+    <div class="modal-card combo-modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalAdminComboTitle">Create Combo Deal</h2>
+        <button type="button" class="modal-close-btn" data-close="modalAdminCombo">&times;</button>
+      </div>
+      <form id="formAdminCombo">
+        <div class="modal-body">
+          <input type="hidden" id="comboEditingId">
+          <div class="form-group">
+            <label for="comboNameInput" class="form-label">Combo Package Name</label>
+            <input type="text" id="comboNameInput" class="form-input" placeholder="e.g. Burger + Fries + Drink Meal" required>
+          </div>
+          <div class="form-group">
+            <label for="comboPriceInput" class="form-label">Combo Package Price (₹)</label>
+            <input type="number" id="comboPriceInput" class="form-input" placeholder="299" min="0" step="any" required>
+          </div>
+          <div class="form-group">
+            <label for="comboDescInput" class="form-label">Description / Tagline</label>
+            <input type="text" id="comboDescInput" class="form-input" placeholder="e.g. 1 Classic Burger, 1 Regular Fries, 1 Chilled Beverage">
+          </div>
+          <div class="form-group">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <label class="form-label" style="margin-bottom: 0;">Items Included in this Combo</label>
+              <span id="comboSelectedCountBadge" class="tag-pill" style="font-weight: 600;">0 items selected</span>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <input type="text" id="comboTreeFilterInput" class="form-input form-input-sm" placeholder="🔍 Search menu tree dishes or categories...">
+            </div>
+            <div id="comboItemsSelectorContainer" class="combo-selector-box combo-tree-selector-box">
+              <!-- Dynamically populated recursive menu tree -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalAdminCombo">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveAdminCombo">Save Combo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 11. GENERIC CONFIRMATION DIALOG -->
+  <div id="modalConfirm" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirmDialogTitle">Confirm Action</h3>
+        <button type="button" class="modal-close-btn" data-close="modalConfirm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmDialogMsg" style="color: var(--color-steel); font-size: 14px; line-height: 1.5;">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnConfirmCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmProceed">Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. ENTRIES: ORDER DETAILS MODAL -->
+  <div id="modalEntryDetails" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span class="tag-pill" id="detailOrderTypePill">DINE-IN</span>
+            <span class="orange-badge" id="detailOrderNumberBadge">#INV-1001</span>
+          </div>
+          <h2 class="modal-title" id="detailOrderTitle">Transaction Details</h2>
+          <p class="modal-subtitle" id="detailOrderSubtitle">Recorded on 17 Oct 2026, 11:05 AM</p>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalEntryDetails">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Metadata cards row -->
+        <div class="detail-meta-grid">
+          <div class="detail-meta-box">
+            <span class="detail-meta-label">Customer Mobile</span>
+            <span class="detail-meta-val" id="detailCustomerPhone">Guest</span>
+          </div>
+          <div class="detail-meta-box">
+            <span class="detail-meta-label">Table & Floor</span>
+            <span class="detail-meta-val" id="detailTableName">Table 1 (Main Hall)</span>
+          </div>
+          <div class="detail-meta-box">
+            <span class="detail-meta-label">Payment Mode</span>
+            <span class="detail-meta-val" id="detailPaymentMode">Cash</span>
+          </div>
+          <div class="detail-meta-box">
+            <span class="detail-meta-label">Net Total</span>
+            <span class="detail-meta-val text-brand-primary" id="detailGrandTotal">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Itemized Items Table -->
+        <div class="table-responsive" style="margin-top: 20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item Details</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th style="text-align: right;">Total Amount</th>
+              </tr>
+            </thead>
+            <tbody id="detailItemsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Financial Summary breakdown -->
+        <div class="detail-financial-summary">
+          <div class="math-row">
+            <span>Subtotal:</span>
+            <span id="detailSubtotal">₹0.00</span>
+          </div>
+          <div class="math-row text-success">
+            <span>Discount Applied:</span>
+            <span id="detailDiscount">- ₹0.00</span>
+          </div>
+          <div class="math-row">
+            <span>GST / Tax:</span>
+            <span id="detailTax">+ ₹0.00</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="math-row math-total">
+            <span>Grand Total Settled:</span>
+            <span id="detailFinalTotal">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Notes / Remarks if present -->
+        <div class="detail-notes-box" id="detailNotesBox" style="margin-top: 16px;">
+          <span class="detail-meta-label">Invoice Note / Remark:</span>
+          <p id="detailNotesText" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; font-style: italic;"></p>
+        </div>
+
+      </div>
+      <div class="modal-footer modal-footer-split">
+        <button type="button" class="btn btn-secondary" data-close="modalEntryDetails">Close</button>
+        <button type="button" id="btnReprintFromDetails" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect width="12" height="8" x="6" y="14"/>
+          </svg>
+          <span>Re-print Thermal Receipt</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13. ENTRIES: PASSWORD VERIFICATION GATE MODAL (For Edit & Void) -->
+  <div id="modalEntryAuth" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <span class="tag-pill">Authorization Required</span>
+          <h3 class="modal-title" style="margin-top: 4px;">Admin Authorization</h3>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalEntryAuth">&times;</button>
+      </div>
+      <form id="formEntryAuth">
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.4;">
+            Modifying or voiding settled transactions requires the administrative passcode.
+          </p>
+          <div class="form-group">
+            <label for="entryAuthPassword" class="form-label">Admin Passcode</label>
+            <div class="password-input-wrap">
+              <input 
+                type="password" 
+                id="entryAuthPassword" 
+                class="form-input" 
+                placeholder="Enter passcode (Default: 1234)" 
+                required 
+                autocomplete="current-password"
+              >
+              <button type="button" id="btnToggleEntryAuthEye" class="btn-toggle-eye" aria-label="Toggle password visibility">
+                👁️
+              </button>
+            </div>
+          </div>
+          <div id="entryAuthErrorBadge" class="gate-error-badge" style="display: none; margin-top: 10px;">
+            Incorrect passcode. Please try again.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalEntryAuth">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitEntryAuth">Authorize Action</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 14. ENTRIES: EDIT ORDER MODAL -->
+  <div id="modalEditOrder" class="modal-backdrop">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <span class="tag-pill">Order Modification</span>
+          <h2 class="modal-title" id="editOrderTitle">Edit Transaction #INV-1001</h2>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalEditOrder">&times;</button>
+      </div>
+      <form id="formEditOrder">
+        <div class="modal-body">
+          <input type="hidden" id="editOrderId">
+          
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="editCustomerPhone" class="form-label">Customer Mobile</label>
+              <input type="text" id="editCustomerPhone" class="form-input" placeholder="e.g. 9876543210 or Guest" required>
+            </div>
+            <div class="form-group">
+              <label for="editPaymentMode" class="form-label">Payment Mode</label>
+              <select id="editPaymentMode" class="form-input">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="card">Card</option>
+                <option value="split">Split Payment</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 16px;">
+            <div class="form-group">
+              <label for="editDiscountInput" class="form-label">Discount Adjustment (₹)</label>
+              <input type="number" id="editDiscountInput" class="form-input" min="0" step="any" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label for="editTaxRateInput" class="form-label">Tax Rate (%)</label>
+              <input type="number" id="editTaxRateInput" class="form-input" min="0" max="100" step="any" placeholder="5">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="editOrderNotes" class="form-label">Bill Remark / Note</label>
+            <input type="text" id="editOrderNotes" class="form-input" placeholder="Bill Remark / Note">
+          </div>
+
+          <!-- Live recalculated grand total box -->
+          <div class="adjustment-preview-box" style="margin-top: 20px;">
+            <span class="preview-label">Updated Net Payable:</span>
+            <span class="preview-val" id="editOrderRecalculatedTotal">₹0.00</span>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalEditOrder">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveEditedOrder">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 15. ENTRIES: VOID / DELETE ORDER MODAL -->
+  <div id="modalVoidOrder" class="modal-backdrop">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <span class="orange-badge" style="background-color: var(--color-danger);">Irreversible Action</span>
+          <h3 class="modal-title" style="margin-top: 4px;">Void & Delete Transaction</h3>
+        </div>
+        <button type="button" class="modal-close-btn" data-close="modalVoidOrder">&times;</button>
+      </div>
+      <form id="formVoidOrder">
+        <div class="modal-body">
+          <input type="hidden" id="voidOrderId">
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+            Are you sure you want to permanently void and delete invoice <strong id="voidOrderNumberLabel">#INV-1001</strong>?
+            This will deduct the transaction amount from sales totals and ledgers.
+          </p>
+
+          <div class="form-group">
+            <label for="voidReasonSelect" class="form-label">Reason for Voiding</label>
+            <select id="voidReasonSelect" class="form-input" required>
+              <option value="Billing Entry Error">Billing Entry Error</option>
+              <option value="Customer Cancellation">Customer Cancellation</option>
+              <option value="Duplicate Bill Entered">Duplicate Bill Entered</option>
+              <option value="Order Refunded">Order Refunded / Returned</option>
+              <option value="Other">Other / Administrative Correction</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modalVoidOrder">Cancel</button>
+          <button type="submit" class="btn btn-danger" id="btnConfirmVoid">Confirm Void Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <nav class="bottom-floating-nav" aria-label="Main Navigation">
+    <div class="nav-pill-container">
+
+      <!-- Dashboard -->
+      <button class="nav-tab active" data-target="dashboard" aria-label="Dashboard">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="9" x="3" y="3" rx="1"/>
+          <rect width="7" height="5" x="14" y="3" rx="1"/>
+          <rect width="7" height="9" x="14" y="12" rx="1"/>
+          <rect width="7" height="5" x="3" y="16" rx="1"/>
+        </svg>
+        <span class="nav-label">Dashboard</span>
+      </button>
+
+      <!-- Kitchen -->
+      <button class="nav-tab" data-target="kitchen" aria-label="Kitchen">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+          <line x1="6" x2="18" y1="17" y2="17"/>
+        </svg>
+        <span class="nav-label">Kitchen</span>
+      </button>
+
+      <!-- POS -->
+      <button class="nav-tab" data-target="pos" aria-label="POS">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="20" height="14" x="2" y="5" rx="2"/>
+          <line x1="2" x2="22" y1="10" y2="10"/>
+        </svg>
+        <span class="nav-label">POS</span>
+      </button>
+
+      <!-- Entries -->
+      <button class="nav-tab" data-target="entries" aria-label="Entries">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" x2="8" y1="13" y2="13"/>
+          <line x1="16" x2="8" y1="17" y2="17"/>
+        </svg>
+        <span class="nav-label">Entries</span>
+      </button>
+
+      <!-- Admin -->
+      <button class="nav-tab" data-target="admin" aria-label="Admin">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span class="nav-label">Admin</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- Global Floating Overlay Scrollbar (Hidden, zero-width, auto-fading) -->
+  <div id="globalOverlayScrollbar" class="overlay-scrollbar-thumb" aria-hidden="true"></div>
+
+  <!-- Core Configuration & State -->
+  <script src="js/config.js"></script>
+  <script src="js/state.js"></script>
+
+  <!-- Synchronization & Persistence -->
+  <script src="js/sync.js"></script>
+  <script src="js/storage.js"></script>
+
+  <!-- Audio, Themes & UI Shell -->
+  <script src="js/audio.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/ui.js"></script>
+
+  <!-- Domain Feature Controllers -->
+  <script src="js/kitchen.js"></script>
+  <script src="js/pos.js"></script>
+  <script src="js/checkout.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/entries.js"></script>
+
+  <!-- Main Application Bootstrapper -->
+  <script src="app.js"></script>
+</body>
+</html>
